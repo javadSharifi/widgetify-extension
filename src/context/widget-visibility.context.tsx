@@ -8,6 +8,7 @@ import { TodosLayout } from '@/layouts/widgets/todos/todos'
 import { ToolsLayout } from '@/layouts/widgets/tools/tools.layout'
 import { WeatherLayout } from '@/layouts/widgets/weather/weather.layout'
 import { WigiArzLayout } from '@/layouts/widgets/wigiArz/wigi_arz.layout'
+import LanguageLearnerWidget from '@/layouts/widgets/language-learner/LanguageLearnerWidget' // Added import
 import { YouTubeLayout } from '@/layouts/widgets/youtube/youtube.layout'
 import {
 	type ReactNode,
@@ -32,6 +33,7 @@ export enum WidgetKeys {
 	notes = 'notes',
 	youtube = 'youtube',
 	wigiPad = 'wigiPad',
+	languageLearner = 'languageLearner', // Added languageLearner
 }
 export interface WidgetItem {
 	id: WidgetKeys
@@ -122,6 +124,14 @@ export const widgetItems: WidgetItem[] = [
 		label: 'آمار یوتیوب',
 		order: 8,
 		node: <YouTubeLayout />,
+		canToggle: true,
+	},
+	{
+		id: WidgetKeys.languageLearner,
+		emoji: '📚', // Or '🗣️' or another suitable emoji
+		label: 'لایتنر زبان آموز',
+		order: 9, // Next available order
+		node: <LanguageLearnerWidget />,
 		canToggle: true,
 	},
 ]
