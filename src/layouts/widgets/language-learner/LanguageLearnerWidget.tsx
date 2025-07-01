@@ -471,7 +471,7 @@ const LanguageLearnerWidget: React.FC = () => {
                                 </p>
                             )}
                             {words.filter(word => word.level === level).map(word => (
-                                <div key={word.id} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow group relative cursor-pointer" onClick={(e) => {
+                                <div key={word.id} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow group relative cursor-pointer" onClick={(e: React.MouseEvent) => {
                                     if ((e.target as HTMLElement).closest('button')) return;
                                     toggleWordDetails(word.id);
                                 }}>
@@ -624,8 +624,7 @@ const LanguageLearnerWidget: React.FC = () => {
           // Add Word Form Area (Content remains largely the same, but inputs/buttons will be updated next)
           <div className="p-2">
             <h3 className="text-lg font-semibold mb-3">افزودن کلمه جدید</h3>
-            {/* Use a form tag for better semantics, though direct onClick on button works too */}
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveWord(); }} className="space-y-4">
+            <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); handleSaveWord(); }} className="space-y-4">
               <div>
                 <label htmlFor="word-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{editingWord ? 'ویرایش کلمه' : 'کلمه'}</label>
                 <TextInput
@@ -744,12 +743,7 @@ const LanguageLearnerWidget: React.FC = () => {
                 )}
               </div>
             ))}
-            {/* Fallback if no tab is selected but not in add form (should not happen with current logic) */}
-            {activeTab === 0 && !showAddWordForm && (
-                 <p className="text-center text-gray-500 dark:text-gray-400 pt-4">
-                    لطفا یک سطح را انتخاب کنید یا کلمه جدید اضافه کنید.
-                 </p>
-            )}
+            {/* Fallback for activeTab === "0" is removed as TabManager always has a selected tab from "1" to "7" */}
           </div>
         )}
       </div>
