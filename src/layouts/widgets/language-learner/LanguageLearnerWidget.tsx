@@ -1,23 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Tooltip from '@/components/toolTip';
-import { TabManager, type TabItem } from '@/components/tab-manager';
-import { Button } from '@/components/button/button';
-import { TextInput } from '@/components/text-input';
-import toast from 'react-hot-toast';
-import {
-  FiPlusSquare,   // For Add new word
-  FiClipboard,    // For Take Exam
-  FiEdit3,        // For Edit word
-  FiTrash2,       // For Delete word
-  FiVolume2,      // For Play sound
-  FiCheckCircle,  // For Correct answer in exam
-  FiXCircle,      // For Incorrect answer in exam
-  FiEye,          // For Show answer in exam
-  FiAlertTriangle // For general warning/info if needed
-} from 'react-icons/fi'; // Using Feather Icons as a consistent set for now
-// import './LanguageLearnerWidget.css'; // Add if custom CSS is needed
+import React, { useState } from "react";
 
-// Define the structure of a word item
 interface LeitnerWord {
   id: string;
   text: string;
@@ -27,19 +9,20 @@ interface LeitnerWord {
   lastTested: number | null;
 }
 
-const LEITNER_STORAGE_KEY = 'leitnerWordsApp';
+const LEITNER_STORAGE_KEY = "leitnerWordsApp";
 
 const LanguageLearnerWidget: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("1"); // Changed to string for TabManager
+  const [activeTab, setActiveTab] = useState<number>(1);
   const [showAddWordForm, setShowAddWordForm] = useState<boolean>(false);
 
   // State for form inputs
-  const [wordInput, setWordInput] = useState<string>('');
-  const [pronunciationInput, setPronunciationInput] = useState<string>('');
-  const [exampleInput, setExampleInput] = useState<string>('');
+  const [wordInput, setWordInput] = useState<string>("");
+  const [pronunciationInput, setPronunciationInput] = useState<string>("");
+  const [exampleInput, setExampleInput] = useState<string>("");
 
   const [words, setWords] = useState<LeitnerWord[]>([]);
-  const [isLoadingPronunciation, setIsLoadingPronunciation] = useState<boolean>(false);
+  const [isLoadingPronunciation, setIsLoadingPronunciation] =
+    useState<boolean>(false);
   const [playingWordId, setPlayingWordId] = useState<string | null>(null);
   const [editingWord, setEditingWord] = useState<LeitnerWord | null>(null);
   const [expandedWordId, setExpandedWordId] = useState<string | null>(null);
@@ -49,9 +32,9 @@ const LanguageLearnerWidget: React.FC = () => {
   const [examWords, setExamWords] = useState<LeitnerWord[]>([]);
   const [currentExamWordIndex, setCurrentExamWordIndex] = useState<number>(0);
   const [showExamAnswer, setShowExamAnswer] = useState<boolean>(false);
-  const [examFeedback, setExamFeedback] = useState<string>(''); // e.g., "Correct!", "Incorrect. Level down."
+  const [examFeedback, setExamFeedback] = useState<string>(""); // e.g., "Correct!", "Incorrect. Level down."
 
-  const LAST_GENERAL_EXAM_TIME_KEY = 'leitnerLastGeneralExamTime';
+  const LAST_GENERAL_EXAM_TIME_KEY = "leitnerLastGeneralExamTime";
   const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const THREE_DAYS_MS = 3 * ONE_DAY_MS;
@@ -75,36 +58,37 @@ const LanguageLearnerWidget: React.FC = () => {
 
   const TABS_COUNT = 7;
 
-  // const handleTabClick = (tabIndex: number) => { // Replaced by TabManager's onTabChange
-  //   setActiveTab(tabIndex);
-  //   setShowAddWordForm(false); // Hide form when changing tabs
-  // };
+  const handleTabClick = (tabIndex: number) => {
+    setActiveTab(tabIndex);
+    setShowAddWordForm(false); // Hide form when changing tabs
+  };
 
   const handleSaveWord = () => {
     if (!wordInput.trim()) {
-      toast.error('فیلد "کلمه" نمی‌تواند خالی باشد.');
+      alert('فیلد "کلمه" نمی‌تواند خالی باشد.'); // Replace with a better notification later
       return;
     }
 
     try {
-      let updatedWordsArray: LeitnerWord[];
-      let targetLevelValue: number;
+      let updatedWords: LeitnerWord[];
+      let targetLevel: number;
 
       if (editingWord) {
         // Update existing word
-        updatedWordsArray = words.map(w =>
+        updatedWords = words.map((w) =>
           w.id === editingWord.id
             ? {
                 ...w,
                 text: wordInput.trim(),
                 pronunciation: pronunciationInput.trim(),
                 example: exampleInput.trim(),
+                // Level is not changed during edit, but could be if needed
               }
             : w
         );
-        targetLevelValue = editingWord.level;
-        console.log('Word updated:', editingWord.id);
-        setEditingWord(null);
+        targetLevel = editingWord.level;
+        console.log("Word updated:", editingWord.id);
+        setEditingWord(null); // Clear editing state
       } else {
         // Add new word
         const newWord: LeitnerWord = {
@@ -116,37 +100,37 @@ const LanguageLearnerWidget: React.FC = () => {
           lastTested: null,
         };
         const existingWordsString = localStorage.getItem(LEITNER_STORAGE_KEY);
-        const currentWords: LeitnerWord[] = existingWordsString ? JSON.parse(existingWordsString) : [];
+        const currentWords: LeitnerWord[] = existingWordsString
+          ? JSON.parse(existingWordsString)
+          : [];
         updatedWords = [...currentWords, newWord];
         targetLevel = newWord.level;
-        console.log('Word saved:', newWord);
+        console.log("Word saved:", newWord);
       }
 
       localStorage.setItem(LEITNER_STORAGE_KEY, JSON.stringify(updatedWords));
       setWords(updatedWords);
 
       // Clear form inputs
-      setWordInput('');
-      setPronunciationInput('');
-      setExampleInput('');
+      setWordInput("");
+      setPronunciationInput("");
+      setExampleInput("");
       setShowAddWordForm(false);
       setActiveTab(targetLevel);
-      toast.success(editingWord ? 'کلمه با موفقیت به‌روزرسانی شد!' : 'کلمه با موفقیت ذخیره شد!');
-
     } catch (error) {
       console.error("Failed to save/update word to localStorage:", error);
-      toast.error("خطا در ذخیره/به‌روزرسانی کلمه. لطفا کنسول را بررسی کنید.");
+      alert("خطا در ذخیره/به‌روزرسانی کلمه. لطفا کنسول را بررسی کنید.");
     }
   };
 
   const openAddWordForm = () => {
-    setWordInput('');
-    setPronunciationInput('');
-    setExampleInput('');
-    setEditingWord(null);
+    setWordInput("");
+    setPronunciationInput("");
+    setExampleInput("");
+    setEditingWord(null); // Ensure editing state is cleared
     setShowAddWordForm(true);
-    // setActiveTab("0") or a specific value is not needed here as TabManager won't be shown
-  }
+    setActiveTab(0); // Indicate no specific level tab is active for the form
+  };
 
   const handleEditWordClick = (word: LeitnerWord) => {
     setEditingWord(word);
@@ -154,56 +138,35 @@ const LanguageLearnerWidget: React.FC = () => {
     setPronunciationInput(word.pronunciation);
     setExampleInput(word.example);
     setShowAddWordForm(true);
-    // No need to change activeTab here, form will overlay TabManager
+    setActiveTab(0); // To show the form view
   };
 
   const handleDeleteWordClick = (wordId: string, wordText: string) => {
-    toast((t) => (
-      <div className="flex flex-col items-center">
-        <span className="text-center">آیا از حذف کلمه "{wordText}" مطمئن هستید؟</span>
-        <div className="mt-3 flex space-x-2 space-x-reverse">
-          <Button
-            size="sm"
-            className="bg-red-500 hover:bg-red-600 text-white"
-            onClick={() => {
-              try {
-                const updatedWords = words.filter(w => w.id !== wordId);
-                localStorage.setItem(LEITNER_STORAGE_KEY, JSON.stringify(updatedWords));
-                setWords(updatedWords);
-                toast.dismiss(t.id);
-                toast.success(`کلمه "${wordText}" با موفقیت حذف شد.`);
-                console.log('Word deleted:', wordId);
-                if (editingWord && editingWord.id === wordId) {
-                  setEditingWord(null);
-                  setWordInput('');
-                  setPronunciationInput('');
-                  setExampleInput('');
-                }
-              } catch (error) {
-                console.error("Failed to delete word from localStorage:", error);
-                toast.error("خطا در حذف کلمه. لطفا کنسول را بررسی کنید.");
-                toast.dismiss(t.id);
-              }
-            }}
-          >
-            بله، حذف کن
-          </Button>
-          <Button
-            size="sm"
-            className="bg-gray-300 hover:bg-gray-400 text-gray-800"
-            onClick={() => toast.dismiss(t.id)}
-          >
-            لغو
-          </Button>
-        </div>
-      </div>
-    ), {
-      duration: 6000, // Keep the toast longer for confirmation
-    });
+    if (window.confirm(`آیا از حذف کلمه "${wordText}" مطمئن هستید؟`)) {
+      try {
+        const updatedWords = words.filter((w) => w.id !== wordId);
+        localStorage.setItem(LEITNER_STORAGE_KEY, JSON.stringify(updatedWords));
+        setWords(updatedWords);
+        console.log("Word deleted:", wordId);
+        // If the deleted word was being edited, clear the form
+        if (editingWord && editingWord.id === wordId) {
+          setEditingWord(null);
+          setWordInput("");
+          setPronunciationInput("");
+          setExampleInput("");
+          // setShowAddWordForm(false); // Optionally hide form
+        }
+      } catch (error) {
+        console.error("Failed to delete word from localStorage:", error);
+        alert("خطا در حذف کلمه. لطفا کنسول را بررسی کنید.");
+      }
+    }
   };
 
   const toggleWordDetails = (wordId: string) => {
-    setExpandedWordId(prevExpandedId => (prevExpandedId === wordId ? null : wordId));
+    setExpandedWordId((prevExpandedId) =>
+      prevExpandedId === wordId ? null : wordId
+    );
   };
 
   // --- EXAM LOGIC ---
@@ -211,12 +174,12 @@ const LanguageLearnerWidget: React.FC = () => {
     const lastExamTimeStr = localStorage.getItem(LAST_GENERAL_EXAM_TIME_KEY);
     if (!lastExamTimeStr) return true; // Never taken an exam
     const lastExamTime = parseInt(lastExamTimeStr, 10);
-    return (Date.now() - lastExamTime) >= THREE_HOURS_MS;
+    return Date.now() - lastExamTime >= THREE_HOURS_MS;
   };
 
   const getWordsForExam = (): LeitnerWord[] => {
     const now = Date.now();
-    const eligibleWords = words.filter(word => {
+    const eligibleWords = words.filter((word) => {
       if (word.level >= 1 && word.level <= 4) {
         return true;
       }
@@ -224,13 +187,13 @@ const LanguageLearnerWidget: React.FC = () => {
       if (!lastTestedTime) return true; // Never tested before
 
       if (word.level === 5) {
-        return (now - lastTestedTime) >= ONE_DAY_MS;
+        return now - lastTestedTime >= ONE_DAY_MS;
       }
       if (word.level === 6) {
-        return (now - lastTestedTime) >= THREE_DAYS_MS;
+        return now - lastTestedTime >= THREE_DAYS_MS;
       }
       if (word.level === 7) {
-        return (now - lastTestedTime) >= ONE_WEEK_MS;
+        return now - lastTestedTime >= ONE_WEEK_MS;
       }
       return false; // Should not happen if level is within 1-7
     });
@@ -243,26 +206,28 @@ const LanguageLearnerWidget: React.FC = () => {
       const lastExamTimeStr = localStorage.getItem(LAST_GENERAL_EXAM_TIME_KEY);
       let timeRemainingMsg = "لطفا ۳ ساعت صبر کنید.";
       if (lastExamTimeStr) {
-          const lastExamTime = parseInt(lastExamTimeStr, 10);
-          const timePassed = Date.now() - lastExamTime;
-          const timeRemaining = THREE_HOURS_MS - timePassed;
-          const minutesRemaining = Math.ceil(timeRemaining / (60 * 1000));
-          timeRemainingMsg = `لطفا حدود ${minutesRemaining} دقیقه دیگر دوباره امتحان کنید.`;
+        const lastExamTime = parseInt(lastExamTimeStr, 10);
+        const timePassed = Date.now() - lastExamTime;
+        const timeRemaining = THREE_HOURS_MS - timePassed;
+        const minutesRemaining = Math.ceil(timeRemaining / (60 * 1000));
+        timeRemainingMsg = `لطفا حدود ${minutesRemaining} دقیقه دیگر دوباره امتحان کنید.`;
       }
-      toast.error(`شما به تازگی امتحان داده‌اید. ${timeRemainingMsg}`);
+      alert(`شما به تازگی امتحان داده‌اید. ${timeRemainingMsg}`);
       return;
     }
 
     const wordsForSession = getWordsForExam();
     if (wordsForSession.length === 0) {
-      toast.info("در حال حاضر کلمه‌ای برای امتحان وجود ندارد. لطفا کلمات بیشتری اضافه کنید یا صبر کنید تا زمان آزمون کلمات فعلی فرا برسد.");
+      alert(
+        "در حال حاضر کلمه‌ای برای امتحان وجود ندارد. لطفا کلمات بیشتری اضافه کنید یا صبر کنید تا زمان آزمون کلمات فعلی فرا برسد."
+      );
       return;
     }
 
     setExamWords(wordsForSession);
     setCurrentExamWordIndex(0);
     setShowExamAnswer(false);
-    setExamFeedback('');
+    setExamFeedback("");
     setIsExamMode(true);
     setShowAddWordForm(false); // Ensure add word form is hidden
     console.log("Exam started with words:", wordsForSession);
@@ -279,10 +244,14 @@ const LanguageLearnerWidget: React.FC = () => {
     let newLevel = currentWord.level;
     if (isCorrect) {
       newLevel = Math.min(7, currentWord.level + 1);
-      setExamFeedback(`عالی بود! "${currentWord.text}" به سطح ${newLevel} رفت.`);
+      setExamFeedback(
+        `عالی بود! "${currentWord.text}" به سطح ${newLevel} رفت.`
+      );
     } else {
       newLevel = Math.max(1, currentWord.level - 1);
-      setExamFeedback(`اشکالی نداره. "${currentWord.text}" به سطح ${newLevel} برگشت.`);
+      setExamFeedback(
+        `اشکالی نداره. "${currentWord.text}" به سطح ${newLevel} برگشت.`
+      );
     }
 
     const updatedWordData: LeitnerWord = {
@@ -292,7 +261,9 @@ const LanguageLearnerWidget: React.FC = () => {
     };
 
     // Update the word in the main 'words' state and localStorage
-    const mainWordsUpdated = words.map(w => w.id === currentWord.id ? updatedWordData : w);
+    const mainWordsUpdated = words.map((w) =>
+      w.id === currentWord.id ? updatedWordData : w
+    );
     setWords(mainWordsUpdated);
     localStorage.setItem(LEITNER_STORAGE_KEY, JSON.stringify(mainWordsUpdated));
 
@@ -309,34 +280,19 @@ const LanguageLearnerWidget: React.FC = () => {
   const endExam = () => {
     setIsExamMode(false);
     localStorage.setItem(LAST_GENERAL_EXAM_TIME_KEY, Date.now().toString());
-    setExamFeedback(`امتحان تمام شد! برای امتحان بعدی باید حداقل ۳ ساعت صبر کنید.`); // This feedback will be shown briefly
+    setExamFeedback(
+      `امتحان تمام شد! برای امتحان بعدی باید حداقل ۳ ساعت صبر کنید.`
+    ); // This feedback will be shown briefly
     // Consider showing a summary or just going back to the main view
-    setActiveTab("1"); // Go back to level 1 or a summary tab if implemented
+    setActiveTab(1); // Go back to level 1 or a summary tab if implemented
     // Reset exam states
     setExamWords([]);
     setCurrentExamWordIndex(0);
     setShowExamAnswer(false);
-    // examFeedback is already set
-    toast.success(examFeedback || "امتحان تمام شد! برای امتحان بعدی باید حداقل ۳ ساعت صبر کنید.", { duration: 4000});
+    // examFeedback will be cleared on next tab click or action.
+    alert("امتحان تمام شد!"); // Temporary alert
   };
   // --- END OF EXAM LOGIC ---
-
-  const getTakeExamTooltipContent = () => {
-    if (!canTakeGeneralExam()) {
-      const lastExamTimeStr = localStorage.getItem(LAST_GENERAL_EXAM_TIME_KEY);
-      if (lastExamTimeStr) {
-        const lastExamTime = parseInt(lastExamTimeStr, 10);
-        const timePassed = Date.now() - lastExamTime;
-        const timeRemaining = THREE_HOURS_MS - timePassed;
-        if (timeRemaining > 0) {
-          const minutesRemaining = Math.ceil(timeRemaining / (60 * 1000));
-          return `تا آزمون بعدی حدود ${minutesRemaining} دقیقه باقی مانده است.`;
-        }
-      }
-      return "شما به تازگی امتحان داده‌اید. لطفا ۳ ساعت صبر کنید.";
-    }
-    return "گرفتن امتحان";
-  };
 
   const playPronunciation = async (wordText: string, wordId: string) => {
     if (isLoadingPronunciation && playingWordId === wordId) return; // Prevent multiple requests for the same word while loading
@@ -345,40 +301,47 @@ const LanguageLearnerWidget: React.FC = () => {
     setPlayingWordId(wordId);
 
     // Attempt to use user-provided pronunciation first if available
-    const currentWord = words.find(w => w.id === wordId);
-    if (currentWord?.pronunciation && currentWord.pronunciation.startsWith('//ssl.gstatic.com')) {
-        // This is a quick check if the stored pronunciation is likely a direct gstatic URL
-        // A more robust check might be needed if various audio URL formats are stored.
-        try {
-            const audio = new Audio(currentWord.pronunciation);
-            await audio.play();
-            setIsLoadingPronunciation(false);
-            setPlayingWordId(null);
-            return;
-        } catch (e) {
-            console.warn("Could not play stored pronunciation, falling back to API:", e);
-            // Fall through to API if playing stored one fails
-        }
+    const currentWord = words.find((w) => w.id === wordId);
+    if (
+      currentWord?.pronunciation &&
+      currentWord.pronunciation.startsWith("//ssl.gstatic.com")
+    ) {
+      // This is a quick check if the stored pronunciation is likely a direct gstatic URL
+      // A more robust check might be needed if various audio URL formats are stored.
+      try {
+        const audio = new Audio(currentWord.pronunciation);
+        await audio.play();
+        setIsLoadingPronunciation(false);
+        setPlayingWordId(null);
+        return;
+      } catch (e) {
+        console.warn(
+          "Could not play stored pronunciation, falling back to API:",
+          e
+        );
+        // Fall through to API if playing stored one fails
+      }
     }
 
-
     try {
-      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${wordText}`);
+      const response = await fetch(
+        `https://api.dictionaryapi.dev/api/v2/entries/en/${wordText}`
+      );
       if (!response.ok) {
         // Try to get error message from API if available
         let errorMsg = `کلمه "${wordText}" یافت نشد یا خطایی در دریافت تلفظ رخ داد.`;
         try {
-            const errorData = await response.json();
-            if (errorData.title && errorData.message) {
-                errorMsg = `${errorData.title}: ${errorData.message}`;
-            }
+          const errorData = await response.json();
+          if (errorData.title && errorData.message) {
+            errorMsg = `${errorData.title}: ${errorData.message}`;
+          }
         } catch (jsonError) {
-            // Ignore if error response is not JSON
+          // Ignore if error response is not JSON
         }
         throw new Error(errorMsg);
       }
       const data = await response.json();
-      let audioUrl = '';
+      let audioUrl = "";
       if (data && data.length > 0) {
         const phonetics = data[0].phonetics;
         if (phonetics && phonetics.length > 0) {
@@ -386,7 +349,7 @@ const LanguageLearnerWidget: React.FC = () => {
             if (p.audio && p.audio.length > 0) {
               audioUrl = p.audio;
               // Prefer GB audio if available, otherwise take any
-              if (p.audio.includes('_gb_')) {
+              if (p.audio.includes("_gb_")) {
                 break;
               }
             }
@@ -406,13 +369,12 @@ const LanguageLearnerWidget: React.FC = () => {
         //   setWords(updatedWords);
         //   localStorage.setItem(LEITNER_STORAGE_KEY, JSON.stringify(updatedWords));
         // }
-
       } else {
-        toast.error(`تلفظ صوتی برای کلمه "${wordText}" یافت نشد.`);
+        alert(`تلفظ صوتی برای کلمه "${wordText}" یافت نشد.`);
       }
     } catch (error: any) {
       console.error("Error fetching pronunciation:", error);
-      toast.error(error.message || "خطا در دریافت تلفظ.");
+      alert(error.message || "خطا در دریافت تلفظ.");
     } finally {
       setIsLoadingPronunciation(false);
       setPlayingWordId(null);
@@ -425,128 +387,47 @@ const LanguageLearnerWidget: React.FC = () => {
       <div className="mb-4 flex justify-between items-center">
         <h2 className="text-xl font-semibold">لایتنر زبان آموز</h2>
         <div className="flex space-x-2 space-x-reverse">
-          <Tooltip content="افزودن کلمه جدید">
-            {/* Ensure Tooltip can correctly wrap a disabled Button or use a wrapper div if needed */}
-            {/* For DaisyUI/Button component, disabled styling should be inherent */}
-            <Button
-              size="sm" // or "xs" for smaller
-              className="btn-square btn-ghost" // btn-ghost for minimal styling, btn-square for square shape
-              onClick={openAddWordForm}
-              disabled={isExamMode}
-              aria-label="افزودن کلمه جدید"
-            >
-              <FiPlusSquare size={18} />
-            </Button>
-          </Tooltip>
-          <Tooltip content={getTakeExamTooltipContent()}>
-             {/* Wrapper div for tooltip on disabled button if Button component doesn't handle it well */}
-            <div className={`${(!canTakeGeneralExam() || isExamMode) ? 'cursor-not-allowed' : ''}`}>
-              <Button
-                size="sm" // or "xs"
-                className="btn-square btn-ghost"
-                onClick={startExam}
-                disabled={isExamMode || !canTakeGeneralExam()}
-                aria-label="گرفتن امتحان"
-              >
-                <FiClipboard size={18} />
-              </Button>
-            </div>
-          </Tooltip>
+          <button
+            onClick={openAddWordForm}
+            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm"
+            disabled={isExamMode} // Disable if in exam mode
+          >
+            افزودن کلمه
+          </button>
+          <button
+            onClick={startExam}
+            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm"
+            disabled={isExamMode} // Disable if already in exam mode
+          >
+            گرفتن امتحان
+          </button>
         </div>
       </div>
 
       {/* Tabs for Levels - Hide if in exam mode or add word form */}
       {!showAddWordForm && !isExamMode && (
-         <TabManager
-            tabs={useMemo(() =>
-                Array.from({ length: TABS_COUNT }, (_, i) => i + 1).map(level => ({
-                    label: `سطح ${level}`,
-                    value: level.toString(),
-                    icon: null, // Or a relevant icon like <VscCircleSmallFilled />
-                    element: (
-                        <div className="p-1 space-y-2 h-full overflow-y-auto small-scrollbar">
-                            {words.filter(word => word.level === level).length === 0 && (
-                                <p className="text-center text-gray-500 dark:text-gray-400 pt-4">
-                                    هیچ کلمه‌ای در سطح {level} وجود ندارد.
-                                </p>
-                            )}
-                            {words.filter(word => word.level === level).map(word => (
-                                <div key={word.id} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow group relative cursor-pointer" onClick={(e: React.MouseEvent) => {
-                                    if ((e.target as HTMLElement).closest('button')) return;
-                                    toggleWordDetails(word.id);
-                                }}>
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-medium flex-1 min-w-0 truncate" title={word.text}>{word.text}</span>
-                                        <div className="flex items-center space-x-1 space-x-reverse flex-shrink-0">
-                                            <Tooltip content="پخش تلفظ">
-                                                <Button
-                                                    size="xs"
-                                                    className="btn-ghost btn-circle"
-                                                    onClick={(e) => { e.stopPropagation(); playPronunciation(word.text, word.id); }}
-                                                    disabled={isLoadingPronunciation && playingWordId === word.id}
-                                                    aria-label="پخش تلفظ"
-                                                >
-                                                    {isLoadingPronunciation && playingWordId === word.id ? <span className="loading loading-spinner loading-xs"></span> : <FiVolume2 size={16} />}
-                                                </Button>
-                                            </Tooltip>
-                                            <Tooltip content="ویرایش کلمه">
-                                                <Button
-                                                    size="xs"
-                                                    className="btn-ghost btn-circle opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={(e) => { e.stopPropagation(); handleEditWordClick(word);}}
-                                                    aria-label="ویرایش کلمه"
-                                                >
-                                                    <FiEdit3 size={16} />
-                                                </Button>
-                                            </Tooltip>
-                                            <Tooltip content="حذف کلمه">
-                                                <Button
-                                                    size="xs"
-                                                    className="btn-ghost btn-circle opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteWordClick(word.id, word.text);}}
-                                                    aria-label="حذف کلمه"
-                                                >
-                                                    <FiTrash2 size={16} />
-                                                </Button>
-                                            </Tooltip>
-                                        </div>
-                                    </div>
-                                    {expandedWordId === word.id && (
-                                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                            {word.example ? (
-                                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                                                    <strong>مثال:</strong> {word.example}
-                                                </p>
-                                            ) : (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 italic">مثالی برای این کلمه وارد نشده است.</p>
-                                            )}
-                                            {word.pronunciation && !word.pronunciation.startsWith('//ssl.gstatic.com') && (
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                    <strong>تلفظ (دستی):</strong> {word.pronunciation}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )
-                })), [words, expandedWordId, isLoadingPronunciation, playingWordId])} // Dependencies for useMemo
-            selectedTab={activeTab}
-            onTabChange={(newTab) => {
-                setActiveTab(newTab);
-                setShowAddWordForm(false);
-                setExpandedWordId(null); // Close any expanded word when changing tabs
-            }}
-            direction="rtl"
-        />
+        <div className="mb-4 flex border-b border-gray-200 dark:border-gray-700">
+          {Array.from({ length: TABS_COUNT }, (_, i) => i + 1).map((level) => (
+            <button
+              key={level}
+              onClick={() => handleTabClick(level)}
+              className={`px-3 py-2 text-sm font-medium focus:outline-none
+                ${
+                  activeTab === level
+                    ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
+            >
+              سطح {level}
+            </button>
+          ))}
+        </div>
       )}
 
-      {/* Content Area: Exam Mode and Add Word Form */}
-      {/* This div will now only contain the Exam or AddWordForm, or be empty if TabManager is shown */}
-      <div className={`flex-grow overflow-y-auto ${(!showAddWordForm && !isExamMode) ? 'hidden' : ''}`}>
-        {isExamMode && (
-          // Exam Mode Area (Content remains largely the same as before)
+      {/* Content Area */}
+      <div className="flex-grow overflow-y-auto">
+        {isExamMode ? (
+          // Exam Mode Area
           <div className="p-4 flex flex-col items-center justify-center h-full">
             {examWords.length > 0 && currentExamWordIndex < examWords.length ? (
               <>
@@ -558,97 +439,126 @@ const LanguageLearnerWidget: React.FC = () => {
                 </h3>
 
                 {!showExamAnswer && (
-                  // Button component for "Show Answer"
-                  <Button
-                    size="md"
-                    className="mb-4 btn-info" // Changed from isPrimary to btn-info for neutral action
+                  <button
                     onClick={handleShowAnswer}
+                    className="mb-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md"
                   >
-                    <FiEye className="mr-2" /> نمایش پاسخ
-                  </Button>
+                    نمایش پاسخ
+                  </button>
                 )}
 
                 {showExamAnswer && (
-                  <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md text-center w-full max-w-md">
+                  <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md text-center">
                     {examWords[currentExamWordIndex].pronunciation && (
-                        <p className="text-md dark:text-gray-300">
-                            تلفظ: {examWords[currentExamWordIndex].pronunciation.startsWith('//ssl.gstatic.com') ? '(از API)' : examWords[currentExamWordIndex].pronunciation}
-                            <Tooltip content="پخش تلفظ">
-                                <Button
-                                    size="xs"
-                                    className="btn-ghost btn-circle ml-2"
-                                    onClick={() => playPronunciation(examWords[currentExamWordIndex].text, examWords[currentExamWordIndex].id)}
-                                    disabled={isLoadingPronunciation && playingWordId === examWords[currentExamWordIndex].id}
-                                    aria-label="پخش تلفظ"
-                                >
-                                     {isLoadingPronunciation && playingWordId === examWords[currentExamWordIndex].id ? <span className="loading loading-spinner loading-xs"></span> : <FiVolume2 size={16} />}
-                                </Button>
-                            </Tooltip>
-                        </p>
+                      <p className="text-md dark:text-gray-300">
+                        تلفظ:{" "}
+                        {examWords[
+                          currentExamWordIndex
+                        ].pronunciation.startsWith("//ssl.gstatic.com")
+                          ? "(از API)"
+                          : examWords[currentExamWordIndex].pronunciation}
+                        <button
+                          onClick={() =>
+                            playPronunciation(
+                              examWords[currentExamWordIndex].text,
+                              examWords[currentExamWordIndex].id
+                            )
+                          }
+                          className="ml-2 text-blue-500 hover:text-blue-700"
+                          disabled={
+                            isLoadingPronunciation &&
+                            playingWordId === examWords[currentExamWordIndex].id
+                          }
+                        >
+                          {isLoadingPronunciation &&
+                          playingWordId === examWords[currentExamWordIndex].id
+                            ? "⏳"
+                            : "🔊"}
+                        </button>
+                      </p>
                     )}
                     <p className="text-md mt-1 dark:text-gray-300 whitespace-pre-wrap">
-                      مثال: {examWords[currentExamWordIndex].example || <span className="italic text-gray-500 dark:text-gray-400">بدون مثال</span>}
+                      مثال:{" "}
+                      {examWords[currentExamWordIndex].example || (
+                        <span className="italic text-gray-500 dark:text-gray-400">
+                          بدون مثال
+                        </span>
+                      )}
                     </p>
                   </div>
                 )}
 
                 {showExamAnswer && (
                   <div className="flex space-x-4 space-x-reverse">
-                     {/* Button components for Correct/Incorrect */}
-                    <Button
-                        size="md"
-                        className="btn-success" // DaisyUI success color
-                        onClick={() => handleExamAnswer(true)}
+                    <button
+                      onClick={() => handleExamAnswer(true)}
+                      className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md"
                     >
-                        <FiCheckCircle className="mr-2" /> درست گفتم
-                    </Button>
-                    <Button
-                        size="md"
-                        className="btn-error" // DaisyUI error color
-                        onClick={() => handleExamAnswer(false)}
+                      درست گفتم
+                    </button>
+                    <button
+                      onClick={() => handleExamAnswer(false)}
+                      className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
                     >
-                        <FiXCircle className="mr-2" /> غلط گفتم
-                    </Button>
+                      غلط گفتم
+                    </button>
                   </div>
                 )}
-                {examFeedback && showExamAnswer && <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">{examFeedback}</p>}
+                {examFeedback && showExamAnswer && (
+                  <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                    {examFeedback}
+                  </p>
+                )}
               </>
             ) : (
-              // This part should ideally not be reached if exam ends correctly and isExamMode becomes false
-              <p className="text-gray-700 dark:text-gray-300">پایان آزمون یا در حال بارگذاری...</p>
+              <p className="text-gray-700 dark:text-gray-300">
+                بارگذاری آزمون...
+              </p> // Or end of exam message if needed here
             )}
           </div>
-        )}
-
-        {showAddWordForm && (
-          // Add Word Form Area (Content remains largely the same, but inputs/buttons will be updated next)
+        ) : showAddWordForm ? (
+          // Add Word Form Area
           <div className="p-2">
             <h3 className="text-lg font-semibold mb-3">افزودن کلمه جدید</h3>
-            <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); handleSaveWord(); }} className="space-y-4">
+            {/* Form elements will go here */}
+            <div className="space-y-3">
               <div>
-                <label htmlFor="word-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{editingWord ? 'ویرایش کلمه' : 'کلمه'}</label>
-                <TextInput
+                <label
+                  htmlFor="word-input"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  {editingWord ? "ویرایش کلمه" : "کلمه"}
+                </label>
+                <input
+                  type="text"
                   id="word-input"
                   value={wordInput}
-                  onChange={setWordInput}
-                  placeholder="کلمه را وارد کنید"
-                  className="bg-content" // Ensure it matches theme
-                  size={"md" as any} // Cast if TextInputSize enum is not directly compatible
+                  onChange={(e) => setWordInput(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label htmlFor="pronunciation-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تلفظ (اختیاری)</label>
-                <TextInput
+                <label
+                  htmlFor="pronunciation-input"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  تلفظ (اختیاری)
+                </label>
+                <input
+                  type="text"
                   id="pronunciation-input"
                   value={pronunciationInput}
-                  onChange={setPronunciationInput}
-                  placeholder="تلفظ کلمه"
-                  className="bg-content"
-                  size={"md" as any}
+                  onChange={(e) => setPronunciationInput(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label htmlFor="example-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مثال</label>
+                <label
+                  htmlFor="example-input"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  مثال
+                </label>
                 <textarea
                   id="example-input"
                   rows={3}
@@ -658,19 +568,20 @@ const LanguageLearnerWidget: React.FC = () => {
                 ></textarea>
               </div>
               <div className="flex justify-end">
-                {/* Buttons to be updated to use Button component */}
                 <button
                   onClick={handleSaveWord}
                   className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm"
                 >
-                  {editingWord ? 'به‌روزرسانی کلمه' : 'ذخیره کلمه'}
+                  {editingWord ? "به‌روزرسانی کلمه" : "ذخیره کلمه"}
                 </button>
                 <button
                   onClick={() => {
                     setShowAddWordForm(false);
-                    setEditingWord(null);
-                    if (!activeTab || activeTab === "0") setActiveTab("1");
-                    else if (editingWord) setActiveTab(editingWord.level.toString());
+                    setEditingWord(null); // Clear editing state on cancel
+                    if (activeTab === 0 && editingWord)
+                      setActiveTab(editingWord.level);
+                    // Go back to original level if was editing
+                    else if (activeTab === 0) setActiveTab(1); // Go back to level 1 tab or last active tab
                   }}
                   className="mr-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md text-sm"
                 >
@@ -682,68 +593,104 @@ const LanguageLearnerWidget: React.FC = () => {
         ) : (
           // Word List Area
           <div className="p-2 space-y-2">
-            {activeTab > 0 && words.filter(word => word.level === activeTab).length === 0 && (
+            {activeTab > 0 &&
+              words.filter((word) => word.level === activeTab).length === 0 && (
+                <p className="text-center text-gray-500 dark:text-gray-400 pt-4">
+                  هیچ کلمه‌ای در سطح {activeTab} وجود ندارد.
+                </p>
+              )}
+            {activeTab > 0 &&
+              words
+                .filter((word) => word.level === activeTab)
+                .map((word) => (
+                  <div
+                    key={word.id}
+                    className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow group relative cursor-pointer"
+                    onClick={(e) => {
+                      // Prevent toggling details if a button inside the card was clicked
+                      if ((e.target as HTMLElement).closest("button")) {
+                        return;
+                      }
+                      toggleWordDetails(word.id);
+                    }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span
+                        className="font-medium flex-1 min-w-0 truncate"
+                        title={word.text}
+                      >
+                        {word.text}
+                      </span>{" "}
+                      {/* Added truncate for long words */}
+                      <div className="flex items-center space-x-2 space-x-reverse flex-shrink-0">
+                        <button
+                          title="پخش تلفظ"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playPronunciation(word.text, word.id);
+                          }}
+                          className={`text-blue-500 hover:text-blue-700 ${
+                            isLoadingPronunciation && playingWordId === word.id
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                          disabled={
+                            isLoadingPronunciation && playingWordId === word.id
+                          }
+                        >
+                          {isLoadingPronunciation && playingWordId === word.id
+                            ? "⏳"
+                            : "🔊"}
+                        </button>
+                        {/* Edit and Delete buttons - shown on hover (using group-hover) or always visible */}
+                        <button
+                          title="ویرایش کلمه"
+                          onClick={() => handleEditWordClick(word)}
+                          className="text-yellow-500 hover:text-yellow-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          title="حذف کلمه"
+                          onClick={() =>
+                            handleDeleteWordClick(word.id, word.text)
+                          }
+                          className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                    {expandedWordId === word.id && (
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        {word.example ? (
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            <strong>مثال:</strong> {word.example}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                            مثالی برای این کلمه وارد نشده است.
+                          </p>
+                        )}
+                        {/* Optionally, display pronunciation text if available and different from API one */}
+                        {word.pronunciation &&
+                          !word.pronunciation.startsWith(
+                            "//ssl.gstatic.com"
+                          ) && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              <strong>تلفظ (دستی):</strong> {word.pronunciation}
+                            </p>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+            {/* Fallback if no tab is selected but not in add form (should not happen with current logic) */}
+            {activeTab === 0 && !showAddWordForm && (
               <p className="text-center text-gray-500 dark:text-gray-400 pt-4">
-                هیچ کلمه‌ای در سطح {activeTab} وجود ندارد.
+                لطفا یک سطح را انتخاب کنید یا کلمه جدید اضافه کنید.
               </p>
             )}
-            {activeTab > 0 && words.filter(word => word.level === activeTab).map(word => (
-              <div key={word.id} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow group relative cursor-pointer" onClick={(e) => {
-                // Prevent toggling details if a button inside the card was clicked
-                if ((e.target as HTMLElement).closest('button')) {
-                  return;
-                }
-                toggleWordDetails(word.id);
-              }}>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium flex-1 min-w-0 truncate" title={word.text}>{word.text}</span> {/* Added truncate for long words */}
-                  <div className="flex items-center space-x-2 space-x-reverse flex-shrink-0">
-                    <button
-                      title="پخش تلفظ"
-                      onClick={(e) => { e.stopPropagation(); playPronunciation(word.text, word.id); }}
-                      className={`text-blue-500 hover:text-blue-700 ${ (isLoadingPronunciation && playingWordId === word.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      onClick={() => playPronunciation(word.text, word.id)}
-                      disabled={isLoadingPronunciation && playingWordId === word.id}
-                    >
-                      { (isLoadingPronunciation && playingWordId === word.id) ? '⏳' : '🔊'}
-                    </button>
-                    {/* Edit and Delete buttons - shown on hover (using group-hover) or always visible */}
-                    <button
-                      title="ویرایش کلمه"
-                      onClick={() => handleEditWordClick(word)}
-                      className="text-yellow-500 hover:text-yellow-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      title="حذف کلمه"
-                      onClick={() => handleDeleteWordClick(word.id, word.text)}
-                      className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-                {expandedWordId === word.id && (
-                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                    {word.example ? (
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        <strong>مثال:</strong> {word.example}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">مثالی برای این کلمه وارد نشده است.</p>
-                    )}
-                    {/* Optionally, display pronunciation text if available and different from API one */}
-                    {word.pronunciation && !word.pronunciation.startsWith('//ssl.gstatic.com') && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            <strong>تلفظ (دستی):</strong> {word.pronunciation}
-                        </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-            {/* Fallback for activeTab === "0" is removed as TabManager always has a selected tab from "1" to "7" */}
           </div>
         )}
       </div>
