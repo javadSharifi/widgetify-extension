@@ -1,0 +1,10 @@
+[
+  {
+    "name": "۱۰۰ کلمه کاربردی",
+    "url": "YOUR_GIST_URL_FOR_common_words.json"
+  },
+  {
+    "name": "اصطلاحات رایج",
+    "url": "YOUR_GIST_URL_FOR_common_idioms.json"
+  }
+]
