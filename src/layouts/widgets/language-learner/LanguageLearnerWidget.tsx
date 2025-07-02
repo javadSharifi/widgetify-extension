@@ -12,7 +12,6 @@ const fetchJson = async (url: string) => {
   return response.json();
 };
 
-
 interface LeitnerWord {
   id: string;
   text: string;
@@ -42,7 +41,9 @@ const LanguageLearnerWidget: React.FC = () => {
   const [expandedWordId, setExpandedWordId] = useState<string | null>(null);
 
   // Word Library State
-  const [selectedCategory, setSelectedCategory] = useState<WordCategory | null>(null); // Changed to WordCategory type
+  const [selectedCategory, setSelectedCategory] = useState<WordCategory | null>(
+    null
+  ); // Changed to WordCategory type
 
   // Interface for the structure of items in library_categories.json
   interface WordCategory {
@@ -53,7 +54,8 @@ const LanguageLearnerWidget: React.FC = () => {
   const [selectedRankKey, setSelectedRankKey] = useState<string | null>(null); // State for selected rank key
 
   // Fetching categories
-  const categoriesUrl = "https://gist.githubusercontent.com/javadSharifi/e9122e8fe2354a8398b58ad6a29b3360/raw/ff2b4aa0517be76cb14aa015495a3c4bf4219f70/library_categories.json";
+  const categoriesUrl =
+    "https://gist.githubusercontent.com/javadSharifi/e9122e8fe2354a8398b58ad6a29b3360/raw/library_categories.json";
   const {
     data: wordCategories,
     isLoading: isLoadingCategories,
@@ -70,36 +72,49 @@ const LanguageLearnerWidget: React.FC = () => {
     example?: string;
   }
 
+  // Type for ranked library words (object with string keys and array of LibraryWordItem)
+  interface RankedLibraryWords {
+    [key: string]: LibraryWordItem[];
+  }
+
   // Fetching words for a selected category
   const {
-    data: libraryWords, // Can be LibraryWordItem[] or Record<string, LibraryWordItem[]>
+    data: libraryWords, // Can be LibraryWordItem[] or RankedLibraryWords
     isLoading: isLoadingLibraryWords,
     error: libraryWordsError,
-  } = useQuery<LibraryWordItem[] | Record<string, LibraryWordItem[]>, Error>({
+  } = useQuery<LibraryWordItem[] | RankedLibraryWords, Error>({
     queryKey: ["libraryWords", selectedCategory?.url],
     queryFn: () => {
       if (!selectedCategory?.url) {
         // This case should ideally not be reached if 'enabled' is set correctly,
         // but as a fallback, return an empty array or object based on type.
-        return selectedCategory?.type === 'ranked' ? Promise.resolve({}) : Promise.resolve([]);
+        return selectedCategory?.type === "ranked"
+          ? Promise.resolve({} as RankedLibraryWords)
+          : Promise.resolve([]);
       }
       return fetchJson(selectedCategory.url);
     },
     enabled: !!selectedCategory?.url, // Query runs if a category is selected
-    onSuccess: () => {
-      // When new category data is fetched, reset the selected rank
-      setSelectedRankKey(null);
-    }
   });
 
+  // Reset selectedRankKey when new libraryWords are fetched
   useEffect(() => {
-    if (libraryWordsError && selectedCategory) { // Ensure selectedCategory is not null
-      alert(`مشکلی در بارگذاری کلمات از "${selectedCategory.name}" پیش آمد: ${libraryWordsError.message}`);
+    if (libraryWords && selectedCategory) {
+      setSelectedRankKey(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryWords, selectedCategory]);
+
+  useEffect(() => {
+    if (libraryWordsError && selectedCategory) {
+      // Ensure selectedCategory is not null
+      alert(
+        `مشکلی در بارگذاری کلمات از "${selectedCategory.name}" پیش آمد: ${libraryWordsError.message}`
+      );
       setSelectedCategory(null); // Reset selected category on error
       setSelectedRankKey(null); // Also reset rank key
     }
   }, [libraryWordsError, selectedCategory]);
-
 
   // Exam State
   const [isExamMode, setIsExamMode] = useState<boolean>(false);
@@ -215,7 +230,7 @@ const LanguageLearnerWidget: React.FC = () => {
     setShowAddWordForm(false);
     setActiveTab(0);
     setSelectedCategory(null); // Reset category when opening library
-    setSelectedRankKey(null);  // Reset rank key when opening library
+    setSelectedRankKey(null); // Reset rank key when opening library
   };
 
   const handleEditWordClick = (word: LeitnerWord) => {
@@ -380,7 +395,12 @@ const LanguageLearnerWidget: React.FC = () => {
   };
   // --- END OF EXAM LOGIC ---
 
-  const handleAddWordFromLibrary = (item: { word: string; meaning: string; example?: string; pronunciation?: string }) => {
+  const handleAddWordFromLibrary = (item: {
+    word: string;
+    meaning: string;
+    example?: string;
+    pronunciation?: string;
+  }) => {
     // Check for duplicates by text (case-insensitive)
     const isDuplicate = words.some(
       (w) => w.text.trim().toLowerCase() === item.word.trim().toLowerCase()
@@ -559,7 +579,9 @@ const LanguageLearnerWidget: React.FC = () => {
           <div className="p-2 flex flex-col h-full">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-semibold">
-                {selectedCategory ? `کلمات: ${selectedCategory.name}` : "کتابخانه کلمات"}
+                {selectedCategory
+                  ? `کلمات: ${selectedCategory.name}`
+                  : "کتابخانه کلمات"}
               </h3>
               <button
                 onClick={() => {
@@ -576,160 +598,267 @@ const LanguageLearnerWidget: React.FC = () => {
 
             {isLoadingCategories && (
               <div className="flex-grow flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400">در حال بارگذاری دسته‌بندی‌ها...</p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  در حال بارگذاری دسته‌بندی‌ها...
+                </p>
               </div>
             )}
 
             {categoriesError && (
               <div className="flex-grow flex flex-col items-center justify-center">
-                <p className="text-red-500 dark:text-red-400">خطا در بارگذاری دسته‌بندی‌ها: {categoriesError.message}</p>
-                <button onClick={() => window.location.reload()} className="mt-2 px-3 py-1 bg-blue-500 text-white rounded">بارگذاری مجدد</button>
+                <p className="text-red-500 dark:text-red-400">
+                  خطا در بارگذاری دسته‌بندی‌ها: {categoriesError.message}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 px-3 py-1 bg-blue-500 text-white rounded"
+                >
+                  بارگذاری مجدد
+                </button>
               </div>
             )}
 
-            {!isLoadingCategories && !categoriesError && !selectedCategory && wordCategories && (
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">یک دسته‌بندی را انتخاب کنید:</p>
-                {wordCategories.map((category) => (
-                  <button
-                    key={category.url} // Using URL as key, assuming it's unique
-                    onClick={() => setSelectedCategory(category)}
-                    className="w-full text-left p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md"
-                  >
-                    {category.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            {!isLoadingCategories &&
+              !categoriesError &&
+              !selectedCategory &&
+              wordCategories && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                    یک دسته‌بندی را انتخاب کنید:
+                  </p>
+                  {wordCategories.map((category) => (
+                    <button
+                      key={category.url} // Using URL as key, assuming it's unique
+                      onClick={() => setSelectedCategory(category)}
+                      className="w-full text-left p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md"
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              )}
 
             {selectedCategory && (
               <>
                 {isLoadingLibraryWords && (
                   <div className="flex-grow flex items-center justify-center">
-                    <p className="text-gray-500 dark:text-gray-400">در حال بارگذاری کلمات از {selectedCategory.name}...</p>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      در حال بارگذاری کلمات از {selectedCategory.name}...
+                    </p>
                   </div>
                 )}
 
                 {/* Error for library words is handled by useEffect. */}
 
                 {/* Ranked Words Display */}
-                {selectedCategory.type === 'ranked' && libraryWords && typeof libraryWords === 'object' && !Array.isArray(libraryWords) && (
-                  <>
-                    {!selectedRankKey ? (
-                      // Display Rank Keys
-                      <div className="flex-grow overflow-y-auto space-y-2">
-                        <button
-                          onClick={() => {
-                            setSelectedCategory(null);
-                            setSelectedRankKey(null); // Ensure rank key is reset
-                          }}
-                          className="mb-3 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm"
-                        >
-                          &rarr; بازگشت به دسته‌بندی‌ها
-                        </button>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">یک رتبه را انتخاب کنید:</p>
-                        {Object.keys(libraryWords).length > 0 ? (
-                          Object.keys(libraryWords).map((rankKey) => (
-                            <button
-                              key={rankKey}
-                              onClick={() => setSelectedRankKey(rankKey)}
-                              className="w-full text-left p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md"
-                            >
-                              {rankKey}
-                            </button>
-                          ))
-                        ) : (
-                          <p>رتبه‌بندی‌ای در این دسته‌بندی یافت نشد.</p>
-                        )}
-                      </div>
-                    ) : (
-                      // Display Words for Selected Rank
-                      <div className="flex-grow overflow-y-auto space-y-2">
-                        <button
-                          onClick={() => setSelectedRankKey(null)}
-                          className="mb-3 px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md text-sm"
-                        >
-                          &rarr; بازگشت به لیست رنک‌ها
-                        </button>
-                        {(libraryWords[selectedRankKey] as LibraryWordItem[] || []).length > 0 ? (
-                          (libraryWords[selectedRankKey] as LibraryWordItem[]).map((item, index) => {
-                            const isAdded = words.some(w => w.text.trim().toLowerCase() === item.word.trim().toLowerCase());
-                            return (
-                              <div key={index} className={`p-3 rounded-md shadow ${isAdded ? 'bg-green-100 dark:bg-green-800' : 'bg-gray-50 dark:bg-gray-700'}`}>
-                                <div className="flex justify-between items-center">
-                                  <h4 className={`font-semibold text-md ${isAdded ? 'text-green-700 dark:text-green-300' : ''}`}>{item.word}</h4>
-                                  <button
-                                    onClick={() => handleAddWordFromLibrary(item)}
-                                    className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={isAdded}
+                {selectedCategory.type === "ranked" &&
+                  libraryWords &&
+                  typeof libraryWords === "object" &&
+                  !Array.isArray(libraryWords) && (
+                    <>
+                      {!selectedRankKey ? (
+                        // Display Rank Keys
+                        <div className="flex-grow overflow-y-auto space-y-2">
+                          <button
+                            onClick={() => {
+                              setSelectedCategory(null);
+                              setSelectedRankKey(null); // Ensure rank key is reset
+                            }}
+                            className="mb-3 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm"
+                          >
+                            &rarr; بازگشت به دسته‌بندی‌ها
+                          </button>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                            یک رتبه را انتخاب کنید:
+                          </p>
+                          {Object.keys(libraryWords).length > 0 ? (
+                            Object.keys(libraryWords).map((rankKey) => (
+                              <button
+                                key={rankKey}
+                                onClick={() => setSelectedRankKey(rankKey)}
+                                className="w-full text-left p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md"
+                              >
+                                {rankKey}
+                              </button>
+                            ))
+                          ) : (
+                            <p>رتبه‌بندی‌ای در این دسته‌بندی یافت نشد.</p>
+                          )}
+                        </div>
+                      ) : (
+                        // Display Words for Selected Rank
+                        <div className="flex-grow overflow-y-auto space-y-2">
+                          <button
+                            onClick={() => setSelectedRankKey(null)}
+                            className="mb-3 px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md text-sm"
+                          >
+                            &rarr; بازگشت به لیست رنک‌ها
+                          </button>
+                          {(
+                            (libraryWords[
+                              selectedRankKey
+                            ] as LibraryWordItem[]) || []
+                          ).length > 0 ? (
+                            (
+                              libraryWords[selectedRankKey] as LibraryWordItem[]
+                            ).map((item, index) => {
+                              const isAdded = words.some(
+                                (w) =>
+                                  w.text.trim().toLowerCase() ===
+                                  item.word.trim().toLowerCase()
+                              );
+                              return (
+                                <div
+                                  key={index}
+                                  className={`p-3 rounded-md shadow ${
+                                    isAdded
+                                      ? "bg-green-100 dark:bg-green-800"
+                                      : "bg-gray-50 dark:bg-gray-700"
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <h4
+                                      className={`font-semibold text-md ${
+                                        isAdded
+                                          ? "text-green-700 dark:text-green-300"
+                                          : ""
+                                      }`}
+                                    >
+                                      {item.word}
+                                    </h4>
+                                    <button
+                                      onClick={() =>
+                                        handleAddWordFromLibrary(item)
+                                      }
+                                      className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                      disabled={isAdded}
+                                    >
+                                      {isAdded ? "اضافه شده" : "افزودن"}
+                                    </button>
+                                  </div>
+                                  <p
+                                    className={`text-sm mt-1 ${
+                                      isAdded
+                                        ? "text-green-600 dark:text-green-400"
+                                        : "text-gray-600 dark:text-gray-300"
+                                    }`}
                                   >
-                                    {isAdded ? "اضافه شده" : "افزودن"}
-                                  </button>
-                                </div>
-                                <p className={`text-sm mt-1 ${isAdded ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`}>{item.meaning}</p>
-                                {item.example && (
-                                  <p className={`text-xs mt-1 italic whitespace-pre-wrap ${isAdded ? 'text-green-500 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                                    مثال: {item.example}
+                                    {item.meaning}
                                   </p>
-                                )}
-                              </div>
-                            );
-                          })
-                        ) : (
-                           <p>کلمه‌ای در رتبه "{selectedRankKey}" یافت نشد.</p>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+                                  {item.example && (
+                                    <p
+                                      className={`text-xs mt-1 italic whitespace-pre-wrap ${
+                                        isAdded
+                                          ? "text-green-500 dark:text-green-500"
+                                          : "text-gray-500 dark:text-gray-400"
+                                      }`}
+                                    >
+                                      مثال: {item.example}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p>کلمه‌ای در رتبه "{selectedRankKey}" یافت نشد.</p>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
 
                 {/* Simple List Display (if category type is not 'ranked' or is undefined) */}
-                {selectedCategory.type !== 'ranked' && Array.isArray(libraryWords) && (
-                  <div className="flex-grow overflow-y-auto space-y-2">
-                    <button
+                {selectedCategory.type !== "ranked" &&
+                  Array.isArray(libraryWords) && (
+                    <div className="flex-grow overflow-y-auto space-y-2">
+                      <button
                         onClick={() => setSelectedCategory(null)}
                         className="mb-3 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm"
                       >
                         &rarr; بازگشت به دسته‌بندی‌ها
-                    </button>
-                    {libraryWords.length > 0 ? (
-                      libraryWords.map((item, index) => {
-                        const isAdded = words.some(w => w.text.trim().toLowerCase() === item.word.trim().toLowerCase());
-                        // Assuming item here is LibraryWordItem
-                        return (
-                          <div key={index} className={`p-3 rounded-md shadow ${isAdded ? 'bg-green-100 dark:bg-green-800' : 'bg-gray-50 dark:bg-gray-700'}`}>
-                            <div className="flex justify-between items-center">
-                              <h4 className={`font-semibold text-md ${isAdded ? 'text-green-700 dark:text-green-300' : ''}`}>{item.word}</h4>
-                              <button
-                                onClick={() => handleAddWordFromLibrary(item)}
-                                className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={isAdded}
+                      </button>
+                      {libraryWords.length > 0 ? (
+                        libraryWords.map((item, index) => {
+                          const isAdded = words.some(
+                            (w) =>
+                              w.text.trim().toLowerCase() ===
+                              item.word.trim().toLowerCase()
+                          );
+                          // Assuming item here is LibraryWordItem
+                          return (
+                            <div
+                              key={index}
+                              className={`p-3 rounded-md shadow ${
+                                isAdded
+                                  ? "bg-green-100 dark:bg-green-800"
+                                  : "bg-gray-50 dark:bg-gray-700"
+                              }`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <h4
+                                  className={`font-semibold text-md ${
+                                    isAdded
+                                      ? "text-green-700 dark:text-green-300"
+                                      : ""
+                                  }`}
+                                >
+                                  {item.word}
+                                </h4>
+                                <button
+                                  onClick={() => handleAddWordFromLibrary(item)}
+                                  className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={isAdded}
+                                >
+                                  {isAdded ? "اضافه شده" : "افزودن"}
+                                </button>
+                              </div>
+                              <p
+                                className={`text-sm mt-1 ${
+                                  isAdded
+                                    ? "text-green-600 dark:text-green-400"
+                                    : "text-gray-600 dark:text-gray-300"
+                                }`}
                               >
-                                {isAdded ? "اضافه شده" : "افزودن"}
-                              </button>
-                            </div>
-                            <p className={`text-sm mt-1 ${isAdded ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`}>{item.meaning}</p>
-                            {item.example && (
-                              <p className={`text-xs mt-1 italic whitespace-pre-wrap ${isAdded ? 'text-green-500 dark:text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                                مثال: {item.example}
+                                {item.meaning}
                               </p>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <p>کلمه‌ای در دسته‌بندی "{selectedCategory.name}" یافت نشد یا لیست خالی است.</p>
-                    )}
-                  </div>
-                )}
+                              {item.example && (
+                                <p
+                                  className={`text-xs mt-1 italic whitespace-pre-wrap ${
+                                    isAdded
+                                      ? "text-green-500 dark:text-green-500"
+                                      : "text-gray-500 dark:text-gray-400"
+                                  }`}
+                                >
+                                  مثال: {item.example}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p>
+                          کلمه‌ای در دسته‌بندی "{selectedCategory.name}" یافت
+                          نشد یا لیست خالی است.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                 {/* Fallback for empty or error in libraryWords (when not loading) */}
-                {!isLoadingLibraryWords && !libraryWordsError &&
-                  ((selectedCategory.type === 'ranked' && (!libraryWords || Object.keys(libraryWords).length === 0)) ||
-                   (selectedCategory.type !== 'ranked' && (!libraryWords || !Array.isArray(libraryWords) || libraryWords.length === 0))) &&
-                  (
+                {!isLoadingLibraryWords &&
+                  !libraryWordsError &&
+                  ((selectedCategory.type === "ranked" &&
+                    (!libraryWords ||
+                      Object.keys(libraryWords).length === 0)) ||
+                    (selectedCategory.type !== "ranked" &&
+                      (!libraryWords ||
+                        !Array.isArray(libraryWords) ||
+                        libraryWords.length === 0))) && (
                     <div className="flex-grow flex flex-col items-center justify-center">
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">محتوایی برای دسته‌بندی "{selectedCategory.name}" یافت نشد.</p>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        محتوایی برای دسته‌بندی "{selectedCategory.name}" یافت
+                        نشد.
+                      </p>
                       <button
                         onClick={() => setSelectedCategory(null)}
                         className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm"
@@ -737,8 +866,7 @@ const LanguageLearnerWidget: React.FC = () => {
                         &rarr; بازگشت به دسته‌بندی‌ها
                       </button>
                     </div>
-                  )
-                }
+                  )}
               </>
             )}
           </div>
