@@ -16,6 +16,7 @@ const LEITNER_STORAGE_KEY = "leitnerWordsApp";
 const LanguageLearnerWidget: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(1);
   const [showAddWordForm, setShowAddWordForm] = useState<boolean>(false);
+  const [showWordLibrary, setShowWordLibrary] = useState<boolean>(false); // New state for word library
 
   // State for form inputs
   const [wordInput, setWordInput] = useState<string>("");
@@ -28,6 +29,47 @@ const LanguageLearnerWidget: React.FC = () => {
   const [playingWordId, setPlayingWordId] = useState<string | null>(null);
   const [editingWord, setEditingWord] = useState<LeitnerWord | null>(null);
   const [expandedWordId, setExpandedWordId] = useState<string | null>(null);
+
+  // Word Library State
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [libraryWords, setLibraryWords] = useState<any[]>([]); // Can be typed more strictly later
+  const [isLoadingLibraryWords, setIsLoadingLibraryWords] = useState<boolean>(false);
+
+  interface WordCategory {
+    name: string;
+    jsonFile: string;
+    url?: string; // Optional: If files are hosted externally
+  }
+
+  const wordCategories: WordCategory[] = [
+    { name: "۱۰۰ کلمه کاربردی", jsonFile: "common_words.json", url: "https://gist.githubusercontent.com/farshadvaziri/570388571c951f66f4921888c628c85e/raw/common_words.json" },
+    { name: "اصطلاحات رایج", jsonFile: "common_idioms.json", url: "https://gist.githubusercontent.com/farshadvaziri/570388571c951f66f4921888c628c85e/raw/common_idioms.json" },
+  ];
+
+  const loadWordsForCategory = async (category: WordCategory) => {
+    if (!category.url) {
+      alert("URL برای این دسته‌بندی تعریف نشده است.");
+      return;
+    }
+    setIsLoadingLibraryWords(true);
+    setSelectedCategory(category.name);
+    setLibraryWords([]);
+    try {
+      const response = await fetch(category.url);
+      if (!response.ok) {
+        throw new Error(`خطا در بارگذاری کلمات: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setLibraryWords(data);
+    } catch (error) {
+      console.error("خطا در دریافت کلمات از کتابخانه:", error);
+      alert(`مشکلی در بارگذاری کلمات از "${category.name}" پیش آمد.`);
+      setSelectedCategory(null); // Reset selected category on error
+    } finally {
+      setIsLoadingLibraryWords(false);
+    }
+  };
+
 
   // Exam State
   const [isExamMode, setIsExamMode] = useState<boolean>(false);
@@ -131,7 +173,14 @@ const LanguageLearnerWidget: React.FC = () => {
     setExampleInput("");
     setEditingWord(null); // Ensure editing state is cleared
     setShowAddWordForm(true);
+    setShowWordLibrary(false); // Close library if open
     setActiveTab(0); // Indicate no specific level tab is active for the form
+  };
+
+  const openWordLibrary = () => {
+    setShowWordLibrary(true);
+    setShowAddWordForm(false); // Close add word form if open
+    setActiveTab(0); // Or a specific tab for the library view if needed
   };
 
   const handleEditWordClick = (word: LeitnerWord) => {
@@ -296,6 +345,50 @@ const LanguageLearnerWidget: React.FC = () => {
   };
   // --- END OF EXAM LOGIC ---
 
+  const handleAddWordFromLibrary = (item: { word: string; meaning: string; example?: string; pronunciation?: string }) => {
+    // Check for duplicates by text (case-insensitive)
+    const isDuplicate = words.some(
+      (w) => w.text.trim().toLowerCase() === item.word.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      alert(`کلمه "${item.word}" قبلاً به لیست شما اضافه شده است.`);
+      return;
+    }
+
+    try {
+      const newWordFromLibrary: LeitnerWord = {
+        id: Date.now().toString(),
+        text: item.word.trim(),
+        // Assuming 'meaning' from JSON can be used as 'pronunciation' for the Leitner system.
+        // Adjust if your JSON has a specific 'pronunciation' field or if it should be empty.
+        pronunciation: item.meaning.trim(), // Or use item.pronunciation if that's the intended field from JSON
+        example: item.example?.trim() || "",
+        level: 1, // New words from library start at level 1
+        lastTested: null,
+      };
+
+      // It's generally better to update based on the latest state from localStorage
+      // to avoid race conditions if the app could be open in multiple tabs (though less likely for a widget).
+      // However, for simplicity and given it's a single-user widget context, updating current 'words' state directly is often fine.
+      const existingWordsString = localStorage.getItem(LEITNER_STORAGE_KEY);
+      const currentWords: LeitnerWord[] = existingWordsString
+        ? JSON.parse(existingWordsString)
+        : [];
+      const updatedWords = [...currentWords, newWordFromLibrary];
+
+      localStorage.setItem(LEITNER_STORAGE_KEY, JSON.stringify(updatedWords));
+      setWords(updatedWords); // Update the state to reflect the change in UI
+
+      console.log("Word added from library:", newWordFromLibrary);
+      alert(`کلمه "${item.word}" با موفقیت به سطح ۱ اضافه شد.`);
+      // Optionally, disable the add button for this item in the library list or provide other visual feedback.
+    } catch (error) {
+      console.error("Failed to add word from library to localStorage:", error);
+      alert("خطا در افزودن کلمه از کتابخانه. لطفا کنسول را بررسی کنید.");
+    }
+  };
+
   const playPronunciation = async (wordText: string, wordId: string) => {
     if (isLoadingPronunciation && playingWordId === wordId) return; // Prevent multiple requests for the same word while loading
 
@@ -403,10 +496,17 @@ const LanguageLearnerWidget: React.FC = () => {
           >
             گرفتن امتحان
           </button>
+          <button
+            onClick={openWordLibrary}
+            className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-md text-sm"
+            disabled={isExamMode || showAddWordForm} // Disable if in exam mode or add word form is open
+          >
+            کتابخانه کلمات
+          </button>
         </div>
       </div>
 
-      {!showAddWordForm && !isExamMode && (
+      {!showAddWordForm && !isExamMode && !showWordLibrary && (
         <div className="mb-4 flex border-b border-gray-200 dark:border-gray-700">
           <TabNavigation
             layoutId="language-learner-tabs"
@@ -419,7 +519,96 @@ const LanguageLearnerWidget: React.FC = () => {
 
       {/* Content Area */}
       <div className="flex-grow overflow-y-auto">
-        {isExamMode ? (
+        {showWordLibrary ? (
+          // Word Library Area
+          <div className="p-2 flex flex-col h-full">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-semibold">
+                {selectedCategory ? `کلمات: ${selectedCategory}` : "کتابخانه کلمات"}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowWordLibrary(false);
+                  setSelectedCategory(null); // Reset category when closing library
+                  setLibraryWords([]);
+                  setActiveTab(1); // Go back to level 1 tab or last active tab
+                }}
+                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded-md text-sm"
+              >
+                بستن
+              </button>
+            </div>
+
+            {isLoadingLibraryWords && (
+              <div className="flex-grow flex items-center justify-center">
+                <p className="text-gray-500 dark:text-gray-400">در حال بارگذاری کلمات...</p>
+              </div>
+            )}
+
+            {!isLoadingLibraryWords && !selectedCategory && (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">یک دسته‌بندی را انتخاب کنید:</p>
+                {wordCategories.map((category) => (
+                  <button
+                    key={category.jsonFile}
+                    onClick={() => loadWordsForCategory(category)}
+                    className="w-full text-left p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md"
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!isLoadingLibraryWords && selectedCategory && libraryWords.length > 0 && (
+              <div className="flex-grow overflow-y-auto space-y-2">
+                <button
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setLibraryWords([]);
+                  }}
+                  className="mb-3 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm"
+                >
+                  &rarr; بازگشت به دسته‌بندی‌ها
+                </button>
+                {libraryWords.map((item, index) => (
+                  <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md shadow">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-semibold text-md">{item.word}</h4>
+                      <button
+                        onClick={() => handleAddWordFromLibrary(item)}
+                        className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={words.some(w => w.text.trim().toLowerCase() === item.word.trim().toLowerCase())}
+                      >
+                        {words.some(w => w.text.trim().toLowerCase() === item.word.trim().toLowerCase()) ? "اضافه شده" : "افزودن"}
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{item.meaning}</p>
+                    {item.example && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic whitespace-pre-wrap">
+                        مثال: {item.example}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {!isLoadingLibraryWords && selectedCategory && libraryWords.length === 0 && (
+               <div className="flex-grow flex flex-col items-center justify-center">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">کلمه‌ای در این دسته‌بندی یافت نشد یا لیست خالی است.</p>
+                <button
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setLibraryWords([]);
+                  }}
+                  className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm"
+                >
+                  &rarr; بازگشت به دسته‌بندی‌ها
+                </button>
+              </div>
+            )}
+          </div>
+        ) : isExamMode ? (
           // Exam Mode Area
           <div className="p-4 flex flex-col items-center justify-center h-full">
             {examWords.length > 0 && currentExamWordIndex < examWords.length ? (

@@ -1,0 +1,27 @@
+[
+  {
+    "word": "Hello",
+    "meaning": "سلام",
+    "example": "Hello, how are you?"
+  },
+  {
+    "word": "Goodbye",
+    "meaning": "خداحافظ",
+    "example": "Goodbye! See you tomorrow."
+  },
+  {
+    "word": "Thank you",
+    "meaning": "متشکرم",
+    "example": "Thank you for your help."
+  },
+  {
+    "word": "Please",
+    "meaning": "لطفا",
+    "example": "Can you please pass the salt?"
+  },
+  {
+    "word": "Yes",
+    "meaning": "بله",
+    "example": "Yes, I would like some coffee."
+  }
+]
